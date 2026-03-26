@@ -1,17 +1,10 @@
-// POST /api/share
-// Stores trip JSON in KV, returns a 6-char short ID
-// KV binding name: PLANJ_KV  (set in Cloudflare dashboard)
-
-const CHARS = 'abcdefghijkmnpqrstuvwxyz23456789'; // no confusing chars
-const ID_LEN = 6;
+const CHARS = 'abcdefghijkmnpqrstuvwxyz23456789';
 const TTL = 60 * 60 * 24 * 90; // 90 days
 
 function genId() {
-  let id = '';
-  const arr = new Uint8Array(ID_LEN);
+  const arr = new Uint8Array(6);
   crypto.getRandomValues(arr);
-  for (const n of arr) id += CHARS[n % CHARS.length];
-  return id;
+  return Array.from(arr, n => CHARS[n % CHARS.length]).join('');
 }
 
 const cors = {
@@ -29,7 +22,6 @@ export async function onRequestPost(context) {
 
     const id = genId();
     await env.PLANJ_KV.put(id, JSON.stringify(trip), { expirationTtl: TTL });
-
     return new Response(JSON.stringify({ id }), { status: 200, headers: cors });
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: cors });

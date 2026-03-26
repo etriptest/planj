@@ -5,8 +5,8 @@ const MOCK_TRIP = {
   title:"北海道冬日奢旅 5天4夜",destination:"日本・北海道",
   dates:"12/20 (六) – 12/24 (三)",travelers:"大人 2 名",theme:"賞雪泡湯・美食・慢旅",
   flight:{
-    outbound:{ airline:"長榮航空", flightNo:"BR116", date:"12/20", from:"桃園 TPE", to:"新千歲 CTS", departure:"08:30", arrival:"13:00", price:"約 NT$18,000／人" },
-    return:  { airline:"長榮航空", flightNo:"BR115", date:"12/24", from:"新千歲 CTS", to:"桃園 TPE", departure:"14:30", arrival:"18:00", price:"約 NT$18,000／人" },
+    outbound:{ airline:"長榮航空", flightNo:"BR116", date:"12/20", from:"桃園國際機場 TPE", to:"新千歲機場 CTS", departure:"08:30", arrival:"13:00", price:"約 NT$18,000／人" },
+    return:  { airline:"長榮航空", flightNo:"BR115", date:"12/24", from:"新千歲機場 CTS", to:"桃園國際機場 TPE", departure:"14:30", arrival:"18:00", price:"約 NT$18,000／人" },
   },
   transfer:{ type:"定額計程車", detail:"新千歲機場至札幌市區，約 60 分鐘", price:"約 ¥11,000／趟" },
   hotel:{ name:"定山渓 鶴雅リゾートスパ 森の謌", location:"定山溪温泉", roomType:"和洋室露天風呂付", nights:4, pricePerNight:"約 NT$12,000", mapUrl:"" },
@@ -321,9 +321,12 @@ const makeCSS = (dark) => `
     .form-panel { width:100%!important; }
     .result-grid { grid-template-columns:1fr 1fr!important; }
     .desktop-days { grid-template-columns:1fr!important; }
+    nav { flex-wrap:wrap!important; gap:8px!important; padding:10px 16px!important; height:auto!important; }
+    nav > div:last-child { width:100%!important; justify-content:flex-start!important; }
   }
   @media(max-width:480px){
     .result-grid { grid-template-columns:1fr!important; }
+    nav { padding:10px 12px!important; }
   }
 `;
 
@@ -516,8 +519,8 @@ export default function PlanJ() {
     const f=trip.flight,tr=trip.transfer,h=trip.hotel;
     const hMap=(h?.mapUrl&&h.mapUrl.startsWith("http"))?h.mapUrl:h?`https://www.google.com/maps/search/${encodeURIComponent((h.name||"")+" "+(h.location||""))}`:"";
     return [
-      f?.outbound&&{key:"outbound",...INFO_META.outbound,title:`${f.outbound.airline} ${f.outbound.flightNo}`,lines:[f.outbound.date&&`${f.outbound.date}`,`${f.outbound.from} → ${f.outbound.to}`,`${f.outbound.departure} → ${f.outbound.arrival}`,f.outbound.price].filter(Boolean),note:"班機資訊為 AI 建議，請至航空公司確認"},
-      f?.return&&  {key:"return",...INFO_META.return,  title:`${f.return.airline} ${f.return.flightNo}`,  lines:[f.return.date&&`${f.return.date}`,`${f.return.from} → ${f.return.to}`,`${f.return.departure} → ${f.return.arrival}`,f.return.price].filter(Boolean),note:"班機資訊為 AI 建議，請至航空公司確認"},
+      f?.outbound&&{key:"outbound",...INFO_META.outbound,title:`${f.outbound.airline} ${f.outbound.flightNo}`,lines:[f.outbound.date&&`📅 ${f.outbound.date}`,`${f.outbound.from} → ${f.outbound.to}`,`⏰ ${f.outbound.departure} → ${f.outbound.arrival}`,`💰 ${f.outbound.price}`].filter(Boolean),note:"班機資訊為 AI 建議，請至航空公司確認"},
+      f?.return&&  {key:"return",...INFO_META.return,  title:`${f.return.airline} ${f.return.flightNo}`,  lines:[f.return.date&&`📅 ${f.return.date}`,`${f.return.from} → ${f.return.to}`,`⏰ ${f.return.departure} → ${f.return.arrival}`,`💰 ${f.return.price}`].filter(Boolean),note:"班機資訊為 AI 建議，請至航空公司確認"},
       tr&&         {key:"transfer",...INFO_META.transfer,title:tr.type,lines:[tr.detail,tr.price]},
       h&&          {key:"hotel",...INFO_META.hotel,title:h.name,lines:[h.location,h.roomType,`${h.nights}晚 · ${h.pricePerNight}／晚`],mapUrl:hMap},
     ].filter(Boolean);
@@ -546,10 +549,10 @@ export default function PlanJ() {
           <span style={{fontSize:13,color:muted,letterSpacing:"1px"}}>一起 J</span>
         </div>
         {phase==="result"&&trip&&(
-          <div style={{display:"flex",gap:8}}>
-            <button className="bar-btn" onClick={copyPlan} style={{background:"none",border:`1px solid ${border}`,color:muted,padding:"6px 14px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12}}>複製行程</button>
-            <button className="bar-btn" onClick={shareTrip} style={{background:accentBg,border:`1px solid ${accent}50`,color:accent,padding:"6px 14px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500}}>🔗 分享行程</button>
-            <button className="bar-btn" onClick={()=>{setPhase("form");setTrip(null);sessionStorage.removeItem("planj_trip");window.history.replaceState({},"",window.location.pathname);}} style={{background:"none",border:`1px solid ${border}`,color:muted,padding:"6px 14px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12}}>重新規劃</button>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+            <button className="bar-btn" onClick={copyPlan} style={{background:"none",border:`1px solid ${border}`,color:muted,padding:"6px 12px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12,whiteSpace:"nowrap"}}>複製行程</button>
+            <button className="bar-btn" onClick={shareTrip} style={{background:accentBg,border:`1px solid ${accent}50`,color:accent,padding:"6px 12px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500,whiteSpace:"nowrap"}}>🔗 分享</button>
+            <button className="bar-btn" onClick={()=>{setPhase("form");setTrip(null);sessionStorage.removeItem("planj_trip");window.history.replaceState({},"",window.location.pathname);}} style={{background:"none",border:`1px solid ${border}`,color:muted,padding:"6px 12px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12,whiteSpace:"nowrap"}}>重新規劃</button>
           </div>
         )}
       </nav>
@@ -787,10 +790,10 @@ export default function PlanJ() {
                                 📍 地圖
                               </a>
                             </div>
-                            <div className="act-ctrls" style={{display:"flex",gap:3,opacity:0,flexShrink:0}}>
-                              <button title="複製" onClick={()=>copyAct(di,ai)} style={{background:accentBg,border:"none",width:28,height:28,borderRadius:7,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>📋</button>
-                              <button title="編輯" onClick={()=>openModal(di,ai)} style={{background:D?"rgba(255,255,255,.05)":"rgba(0,0,0,.04)",border:"none",width:28,height:28,borderRadius:7,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>✏️</button>
-                              <button title="刪除" onClick={()=>delAct(di,ai)} style={{background:D?"rgba(255,60,60,.1)":"rgba(200,0,0,.05)",border:"none",width:28,height:28,borderRadius:7,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                            <div className="act-ctrls" style={{display:"flex",flexDirection:"column",gap:2,opacity:0,flexShrink:0}}>
+                              <button title="複製" onClick={()=>copyAct(di,ai)} style={{background:accentBg,border:"none",width:24,height:24,borderRadius:6,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>📋</button>
+                              <button title="編輯" onClick={()=>openModal(di,ai)} style={{background:D?"rgba(255,255,255,.05)":"rgba(0,0,0,.04)",border:"none",width:24,height:24,borderRadius:6,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>✏️</button>
+                              <button title="刪除" onClick={()=>delAct(di,ai)} style={{background:D?"rgba(255,60,60,.1)":"rgba(200,0,0,.05)",border:"none",width:24,height:24,borderRadius:6,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                             </div>
                           </div>
                         );
