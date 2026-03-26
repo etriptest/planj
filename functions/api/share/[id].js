@@ -9,7 +9,6 @@ export async function onRequestGet(context) {
   const { params, env } = context;
   const id = params.id;
   if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: cors });
-
   try {
     const value = await env.PLANJ_KV.get(id);
     if (!value) return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: cors });

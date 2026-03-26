@@ -323,10 +323,22 @@ const makeCSS = (dark) => `
     .desktop-days { grid-template-columns:1fr!important; }
     nav { flex-wrap:wrap!important; gap:8px!important; padding:10px 16px!important; height:auto!important; }
     nav > div:last-child { width:100%!important; justify-content:flex-start!important; }
+    /* Mobile activity: hide desktop elements */
+    .act-mobile .drag-handle-el { display:none!important; }
+    .act-mobile .act-desktop-row { display:none!important; }
+    .act-mobile .act-mobile-layout { display:block!important; }
+    .act-mobile .act-ctrls { opacity:1!important; flex-direction:row!important; }
+    .day-actions-desktop { display:none!important; }
   }
   @media(max-width:480px){
     .result-grid { grid-template-columns:1fr!important; }
     nav { padding:10px 12px!important; }
+  }
+  @media(min-width:769px){
+    .day-swipe-actions { display:none!important; }
+    .act-mobile-layout { display:none!important; }
+    .act-desktop-row { display:flex!important; }
+    .day-actions-desktop { display:flex!important; }
   }
 `;
 
@@ -340,6 +352,8 @@ export default function PlanJ() {
   const [infoModal, setInfoModal] = useState(null);
   const [infoForm, setInfoForm]   = useState({});
   const [dragOver, setDragOver]   = useState(null);
+  const [swipedDay, setSwipedDay] = useState(null); // which day banner is swiped
+  const swipeStart = useRef(null);
   const [toast, setToast]         = useState("");
   const [formData, setFormData]   = useState({
     adults:"2", children:"0", departure:"", returnDate:"", destination:"日本・北海道",
@@ -756,18 +770,42 @@ export default function PlanJ() {
               const m=DAY_MOODS[di%DAY_MOODS.length];
               return(
                 <div key={di} className="day-block" style={{background:surface,border:`1px solid ${border}`,borderRadius:16,overflow:"hidden"}}>
-                  <div style={{background:m.hd,padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer"}} onClick={()=>setCollapsed(c=>({...c,[di]:!c[di]}))}>
-                    <div style={{display:"flex",alignItems:"center",gap:12}}>
-                      <span style={{background:m.badge,color:"#fff",fontSize:10,fontWeight:600,letterSpacing:"2px",padding:"3px 10px",borderRadius:20,textTransform:"uppercase"}}>Day {day.day}</span>
-                      <div>
-                        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:19,color:"#fff",letterSpacing:"0.3px"}}>{day.title}</div>
-                        <div style={{fontSize:12,color:"rgba(255,255,255,.55)",marginTop:1,letterSpacing:"0.5px"}}>{day.date}</div>
-                      </div>
+                  {/* Day header wrapper with swipe support */}
+                  <div style={{position:"relative",overflow:"hidden"}}>
+                    {/* Swipe-reveal action buttons (mobile only) */}
+                    <div className="day-swipe-actions" style={{position:"absolute",right:0,top:0,bottom:0,display:"flex",alignItems:"center",gap:0,zIndex:1}}>
+                      <button onClick={e=>{e.stopPropagation();editDayTitle(di);setSwipedDay(null);}}
+                        style={{background:"#4A8A6E",border:"none",height:"100%",padding:"0 18px",color:"#fff",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>✏️</button>
+                      <button onClick={e=>{e.stopPropagation();delDay(di);setSwipedDay(null);}}
+                        style={{background:"#C0504D",border:"none",height:"100%",padding:"0 18px",color:"#fff",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>🗑️</button>
                     </div>
-                    <div style={{display:"flex",gap:6,alignItems:"center"}} onClick={e=>e.stopPropagation()}>
-                      <button onClick={()=>editDayTitle(di)} style={{background:"rgba(255,255,255,.1)",border:"none",borderRadius:6,padding:"3px 8px",fontSize:12,color:"rgba(255,255,255,.7)",cursor:"pointer",fontFamily:"inherit"}}>✏️</button>
-                      <button onClick={()=>delDay(di)} style={{background:"rgba(255,255,255,.1)",border:"none",borderRadius:6,padding:"3px 8px",fontSize:12,color:"rgba(255,255,255,.7)",cursor:"pointer",fontFamily:"inherit"}}>🗑️</button>
-                      <span style={{color:"rgba(255,255,255,.5)",fontSize:12,marginLeft:4,display:"inline-block",transition:"transform .25s",transform:collapsed[di]?"rotate(-90deg)":"rotate(0)"}}>▾</span>
+                    {/* Banner */}
+                    <div
+                      style={{background:m.hd,padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",
+                        position:"relative",zIndex:2,
+                        transform:swipedDay===di?"translateX(-96px)":"translateX(0)",
+                        transition:"transform .25s ease"}}
+                      onClick={()=>{ if(swipedDay===di){setSwipedDay(null);} else {setCollapsed(c=>({...c,[di]:!c[di]}));} }}
+                      onTouchStart={e=>{ swipeStart.current={x:e.touches[0].clientX,day:di}; }}
+                      onTouchEnd={e=>{
+                        if(!swipeStart.current||swipeStart.current.day!==di)return;
+                        const dx=e.changedTouches[0].clientX - swipeStart.current.x;
+                        if(dx < -50) setSwipedDay(di);
+                        else if(dx > 30) setSwipedDay(null);
+                        swipeStart.current=null;
+                      }}>
+                      <div style={{display:"flex",alignItems:"center",gap:12}}>
+                        <span style={{background:m.badge,color:"#fff",fontSize:10,fontWeight:600,letterSpacing:"2px",padding:"3px 10px",borderRadius:20,textTransform:"uppercase"}}>Day {day.day}</span>
+                        <div>
+                          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:19,color:"#fff",letterSpacing:"0.3px"}}>{day.title}</div>
+                          <div style={{fontSize:12,color:"rgba(255,255,255,.55)",marginTop:1,letterSpacing:"0.5px"}}>{day.date}</div>
+                        </div>
+                      </div>
+                      <div className="day-actions-desktop" style={{display:"flex",gap:6,alignItems:"center"}} onClick={e=>e.stopPropagation()}>
+                        <button onClick={()=>editDayTitle(di)} style={{background:"rgba(255,255,255,.1)",border:"none",borderRadius:6,padding:"3px 8px",fontSize:12,color:"rgba(255,255,255,.7)",cursor:"pointer",fontFamily:"inherit"}}>✏️</button>
+                        <button onClick={()=>delDay(di)} style={{background:"rgba(255,255,255,.1)",border:"none",borderRadius:6,padding:"3px 8px",fontSize:12,color:"rgba(255,255,255,.7)",cursor:"pointer",fontFamily:"inherit"}}>🗑️</button>
+                        <span style={{color:"rgba(255,255,255,.5)",fontSize:12,marginLeft:4,display:"inline-block",transition:"transform .25s",transform:collapsed[di]?"rotate(-90deg)":"rotate(0)"}}>▾</span>
+                      </div>
                     </div>
                   </div>
 
@@ -778,18 +816,25 @@ export default function PlanJ() {
                         return(
                           <div key={ai} className={`act-row${isOver?" drag-over":""}`}
                             draggable onDragStart={e=>onDragStart(e,di,ai)} onDragOver={e=>onDragOver(e,di,ai)} onDragLeave={onDragLeave} onDrop={e=>onDrop(e,di,ai)}
-                            style={{display:"flex",alignItems:"flex-start",gap:10,padding:"9px 8px",borderRadius:10,cursor:"grab",border:"1px solid transparent",marginBottom:1}}>
-                            <span style={{color:border,fontSize:14,cursor:"grab",flexShrink:0,marginTop:3}}>⠿</span>
-                            <span style={{fontSize:12,color:accent,fontWeight:500,whiteSpace:"nowrap",width:38,flexShrink:0,marginTop:3,letterSpacing:"0.5px"}}>{act.time}</span>
-                            <span style={{fontSize:18,flexShrink:0,width:24,textAlign:"center",marginTop:1}}>{act.icon||"📍"}</span>
+                            style={{display:"flex",alignItems:"flex-start",gap:8,padding:"11px 8px",borderRadius:10,cursor:"grab",border:"1px solid transparent",marginBottom:1}}>
+                            {/* Drag handle - hidden on mobile via CSS */}
+                            <span className="drag-handle-el" style={{color:border,fontSize:14,cursor:"grab",flexShrink:0,marginTop:14}}>⠿</span>
+                            {/* Content */}
                             <div style={{flex:1,minWidth:0}}>
-                              <div style={{fontSize:15,color:text,fontWeight:500,marginBottom:2}}>{act.name}</div>
-                              <div style={{fontSize:13,color:muted,lineHeight:1.6,marginBottom:act.mapUrl?6:0}}>{act.desc}</div>
+                              {/* Time + icon + name in one line */}
+                              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"nowrap"}}>
+                                <span style={{fontSize:12,color:accent,fontWeight:600,whiteSpace:"nowrap",letterSpacing:"0.5px",flexShrink:0}}>{act.time}</span>
+                                <span style={{fontSize:16,flexShrink:0}}>{act.icon||"📍"}</span>
+                                <span style={{fontSize:15,color:text,fontWeight:500,lineHeight:1.3}}>{act.name}</span>
+                              </div>
+                              {/* Desc below */}
+                              <div style={{fontSize:13,color:muted,lineHeight:1.55,marginBottom:6,paddingLeft:2}}>{act.desc}</div>
                               <a className="map-lnk" href={autoMapUrl(act)} target="_blank" rel="noreferrer"
                                 style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:11,color:muted,border:`1px solid ${border}`,padding:"2px 8px",borderRadius:20,textDecoration:"none"}}>
                                 📍 地圖
                               </a>
                             </div>
+                            {/* Action buttons - vertical, appear on hover (desktop) / always show (mobile) */}
                             <div className="act-ctrls" style={{display:"flex",flexDirection:"column",gap:2,opacity:0,flexShrink:0}}>
                               <button title="複製" onClick={()=>copyAct(di,ai)} style={{background:accentBg,border:"none",width:24,height:24,borderRadius:6,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>📋</button>
                               <button title="編輯" onClick={()=>openModal(di,ai)} style={{background:D?"rgba(255,255,255,.05)":"rgba(0,0,0,.04)",border:"none",width:24,height:24,borderRadius:6,cursor:"pointer",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center"}}>✏️</button>

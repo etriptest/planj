@@ -1,5 +1,5 @@
 const CHARS = 'abcdefghijkmnpqrstuvwxyz23456789';
-const TTL = 60 * 60 * 24 * 90; // 90 days
+const TTL = 60 * 60 * 24 * 90;
 
 function genId() {
   const arr = new Uint8Array(6);
@@ -19,7 +19,6 @@ export async function onRequestPost(context) {
   try {
     const { trip } = await request.json();
     if (!trip) return new Response(JSON.stringify({ error: "trip is required" }), { status: 400, headers: cors });
-
     const id = genId();
     await env.PLANJ_KV.put(id, JSON.stringify(trip), { expirationTtl: TTL });
     return new Response(JSON.stringify({ id }), { status: 200, headers: cors });

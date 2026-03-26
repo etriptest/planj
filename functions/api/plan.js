@@ -21,11 +21,11 @@ export async function onRequestPost(context) {
 "hotel":{"name":"","location":"","roomType":"","nights":0,"pricePerNight":"","mapUrl":""},
 "days":[{"day":1,"date":"","title":"","activities":[{"time":"","icon":"emoji","name":"","desc":"30字內","mapUrl":""}]}]}
 規則：
-- from/to 格式範例：桃園國際機場 TPE、新千歲機場 CTS、成田機場 NRT
-- 每天5-6個活動，最後一個活動不要是回飯店（程式會自動加）
+- from/to 格式：桃園國際機場 TPE、新千歲機場 CTS、成田機場 NRT 等
+- 每天5-6個活動，最後不要是回飯店（程式自動加）
 - 符合使用者偏好（主題、預算、租車、飯店星級）
 - 餐廳要有在地特色
-- mapUrl 用活動名稱加城市產生關鍵字，例如：狸小路商店街+札幌
+- mapUrl 用活動名稱加城市，例如：狸小路商店街+札幌
 - 價格用 TWD 或 JPY`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
