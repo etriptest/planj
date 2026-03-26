@@ -520,11 +520,30 @@ export default function PlanJ() {
         body: JSON.stringify({ trip }),
       });
       const data = await res.json();
-      if(data.error || !data.id){ showToast("分享失敗，請重試"); return; }
+      if(data.error || !data.id){ throw new Error(data.error||"no id"); }
       const url = `${window.location.origin}/s/${data.id}`;
-      navigator.clipboard.writeText(url).then(()=>showToast("分享連結已複製！傳給朋友吧 ✈️"));
+      // Use clipboard API with fallback
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(url);
+        showToast("分享連結已複製！傳給朋友吧 ✈️");
+      } else {
+        // Fallback: prompt user to copy manually
+        window.prompt("複製這個分享連結：", url);
+      }
     } catch(e){
-      showToast("分享失敗，請重試");
+      // Fallback: use encoded URL directly
+      try {
+        const encoded = encodeTrip(trip);
+        if(encoded){
+          const url = `${window.location.origin}${window.location.pathname}?trip=${encoded}`;
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            await navigator.clipboard.writeText(url);
+            showToast("分享連結已複製（長連結）✈️");
+          } else {
+            window.prompt("複製這個分享連結：", url);
+          }
+        }
+      } catch(e2){ showToast("分享失敗，請重試"); }
     }
   }
 
@@ -749,7 +768,7 @@ export default function PlanJ() {
           <div style={{marginBottom:16,...sectionLabel}}>交通 & 住宿</div>
           <div className="result-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:36}}>
             {infoCards.map((c,i)=>(
-              <div key={i} className="info-card" style={{background:D?c.darkBg:c.bg,border:`1px solid ${D?c.color+"40":c.color+"30"}`,borderRadius:14,padding:"18px 20px",position:"relative",animation:`fadeUp .3s ${i*.06}s ease both`}}>
+              <div key={i} className="info-card" style={{background:D?c.darkBg:c.bg,border:`1px solid ${D?c.color+"40":c.color+"30"}`,borderRadius:14,padding:"18px 20px",position:"relative",animation:"none"}}>
                 <button onClick={()=>openInfoModal(c.key)}
                   style={{position:"absolute",top:12,right:12,background:`${c.color}18`,border:`1px solid ${c.color}50`,color:c.color,borderRadius:6,padding:"4px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}}>
                   ✏️ 編輯
@@ -758,7 +777,7 @@ export default function PlanJ() {
                 <div style={{fontSize:18,fontFamily:"'Cormorant Garamond',serif",color:text,marginBottom:6,paddingRight:60,lineHeight:1.3}}>{c.title}</div>
                 <div style={{fontSize:13,color:muted,lineHeight:1.8}}>{c.lines.map((l,j)=><div key={j}>{l}</div>)}</div>
                 {c.note&&<div style={{fontSize:10,color:c.color,marginTop:8,letterSpacing:"0.5px",opacity:.75}}>{c.note}</div>}
-                {c.mapUrl&&<a className="map-lnk" href={mapHref(c.mapUrl)} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,marginTop:10,fontSize:11,color:c.color,border:`1px solid ${c.color}40`,padding:"3px 10px",borderRadius:20,textDecoration:"none",letterSpacing:"0.5px"}}>📍 地圖</a>}
+                {c.mapUrl&&<a className="map-lnk" href={mapHref(c.mapUrl)} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,marginTop:10,fontSize:11,color:c.color,border:`1px solid ${c.color}40`,padding:"3px 10px",borderRadius:20,textDecoration:"none",letterSpacing:"0.5px"}}>📍 Google Map</a>}
               </div>
             ))}
           </div>
@@ -831,7 +850,7 @@ export default function PlanJ() {
                               <div style={{fontSize:13,color:muted,lineHeight:1.55,marginBottom:6,paddingLeft:2}}>{act.desc}</div>
                               <a className="map-lnk" href={autoMapUrl(act)} target="_blank" rel="noreferrer"
                                 style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:11,color:muted,border:`1px solid ${border}`,padding:"2px 8px",borderRadius:20,textDecoration:"none"}}>
-                                📍 地圖
+                                📍 Google Map
                               </a>
                             </div>
                             {/* Action buttons - vertical, appear on hover (desktop) / always show (mobile) */}
