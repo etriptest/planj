@@ -228,6 +228,24 @@ function DateRangePicker({ departure, returnDate, onChange, dark, accent, border
   );
 }
 
+// ── SHARE via URL ────────────────────────────────────────
+function encodeTrip(trip) {
+  try {
+    const json = JSON.stringify(trip);
+    // btoa needs latin1, so encode as URI first
+    const encoded = btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g,
+      (_, p1) => String.fromCharCode('0x' + p1)));
+    return encoded;
+  } catch(e) { return null; }
+}
+function decodeTrip(str) {
+  try {
+    const json = decodeURIComponent(Array.from(atob(str),
+      c => '%' + c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
+    return JSON.parse(json);
+  } catch(e) { return null; }
+}
+
 function injectReturnToHotel(trip) {
   const h = trip.hotel;
   const hotelName = h?.name || "飯店";
@@ -325,6 +343,57 @@ export default function PlanJ() {
     theme:"溫泉療癒", budget:"舒適享受（NT$30,000–60,000）", car:"不租車", star:"4星以上",
     destCustom:"",
   });
+
+  // ── Load trip on mount: /s/:id short URL, ?trip= param, or sessionStorage
+  useEffect(() => {
+    async function loadTrip() {
+      // 1. Short URL: /s/abc123
+      const pathMatch = window.location.pathname.match(/^\/s\/([a-zA-Z0-9]+)$/);
+      if (pathMatch) {
+        try {
+          const res = await fetch(`/api/share/${pathMatch[1]}`);
+          const data = await res.json();
+          if (data.trip) {
+            setTrip(data.trip);
+            setCollapsed({});
+            setPhase("result");
+            sessionStorage.setItem("planj_trip", JSON.stringify(data.trip));
+            return;
+          }
+        } catch(e) {}
+      }
+      // 2. Legacy ?trip= param
+      const params = new URLSearchParams(window.location.search);
+      const tripParam = params.get("trip");
+      if (tripParam) {
+        const decoded = decodeTrip(tripParam);
+        if (decoded) {
+          setTrip(decoded);
+          setCollapsed({});
+          setPhase("result");
+          sessionStorage.setItem("planj_trip", JSON.stringify(decoded));
+          return;
+        }
+      }
+      // 3. sessionStorage (page refresh)
+      const saved = sessionStorage.getItem("planj_trip");
+      if (saved) {
+        try {
+          const decoded = JSON.parse(saved);
+          setTrip(decoded);
+          setCollapsed({});
+          setPhase("result");
+        } catch(e) {}
+      }
+    }
+    loadTrip();
+  }, []);
+
+  // ── Save trip to sessionStorage whenever it changes
+  useEffect(() => {
+    if (trip) sessionStorage.setItem("planj_trip", JSON.stringify(trip));
+    else sessionStorage.removeItem("planj_trip");
+  }, [trip]);
 
   const toastRef  = useRef(null);
   const dragSrc   = useRef(null);
@@ -424,6 +493,24 @@ export default function PlanJ() {
     navigator.clipboard.writeText(txt).then(()=>showToast("已複製行程"));
   }
 
+  async function shareTrip(){
+    if(!trip)return;
+    showToast("產生分享連結中…");
+    try {
+      const res = await fetch("/api/share", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ trip }),
+      });
+      const data = await res.json();
+      if(data.error || !data.id){ showToast("分享失敗，請重試"); return; }
+      const url = `${window.location.origin}/s/${data.id}`;
+      navigator.clipboard.writeText(url).then(()=>showToast("分享連結已複製！傳給朋友吧 ✈️"));
+    } catch(e){
+      showToast("分享失敗，請重試");
+    }
+  }
+
   function getInfoCards() {
     if(!trip)return[];
     const f=trip.flight,tr=trip.transfer,h=trip.hotel;
@@ -461,7 +548,8 @@ export default function PlanJ() {
         {phase==="result"&&trip&&(
           <div style={{display:"flex",gap:8}}>
             <button className="bar-btn" onClick={copyPlan} style={{background:"none",border:`1px solid ${border}`,color:muted,padding:"6px 14px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12}}>複製行程</button>
-            <button className="bar-btn" onClick={()=>{setPhase("form");setTrip(null);}} style={{background:"none",border:`1px solid ${border}`,color:muted,padding:"6px 14px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12}}>重新規劃</button>
+            <button className="bar-btn" onClick={shareTrip} style={{background:accentBg,border:`1px solid ${accent}50`,color:accent,padding:"6px 14px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:500}}>🔗 分享行程</button>
+            <button className="bar-btn" onClick={()=>{setPhase("form");setTrip(null);sessionStorage.removeItem("planj_trip");window.history.replaceState({},"",window.location.pathname);}} style={{background:"none",border:`1px solid ${border}`,color:muted,padding:"6px 14px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",fontSize:12}}>重新規劃</button>
           </div>
         )}
       </nav>
@@ -645,9 +733,9 @@ export default function PlanJ() {
           <div className="result-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:36}}>
             {infoCards.map((c,i)=>(
               <div key={i} className="info-card" style={{background:D?c.darkBg:c.bg,border:`1px solid ${D?c.color+"40":c.color+"30"}`,borderRadius:14,padding:"18px 20px",position:"relative",animation:`fadeUp .3s ${i*.06}s ease both`}}>
-                <button className="edit-btn" onClick={()=>openInfoModal(c.key)}
-                  style={{position:"absolute",top:12,right:12,opacity:0,background:`${c.color}18`,border:`1px solid ${c.color}50`,color:c.color,borderRadius:6,padding:"3px 10px",fontSize:11,cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px",transition:"opacity .15s"}}>
-                  編輯
+                <button onClick={()=>openInfoModal(c.key)}
+                  style={{position:"absolute",top:12,right:12,background:`${c.color}18`,border:`1px solid ${c.color}50`,color:c.color,borderRadius:6,padding:"4px 12px",fontSize:12,cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px"}}>
+                  ✏️ 編輯
                 </button>
                 <div style={{fontSize:12,letterSpacing:"2px",textTransform:"uppercase",color:c.color,marginBottom:6,opacity:.9}}>{c.lbl}</div>
                 <div style={{fontSize:18,fontFamily:"'Cormorant Garamond',serif",color:text,marginBottom:6,paddingRight:60,lineHeight:1.3}}>{c.title}</div>
