@@ -62,13 +62,13 @@ const DAY_MOODS = [
 ];
 
 const INFO_META = {
-  outbound:{ title:"編輯去程班機", color:"#4A6670", bg:"#EDF2F4", icon:"✈️", lbl:"去程班機",
+  outbound:{ title:"編輯去程班機", color:"#4A6670", bg:"#DDE8EC", darkBg:"#1E2E32", icon:"✈️", lbl:"去程班機",
     fields:[["airline","航空公司"],["flightNo","班號"],["date","日期"],["from","出發地"],["to","目的地"],["departure","出發時間"],["arrival","抵達時間"],["price","票價"]] },
-  return:  { title:"編輯回程班機", color:"#6B5B6E", bg:"#F2EEF2", icon:"🛬", lbl:"回程班機",
+  return:  { title:"編輯回程班機", color:"#6B5B6E", bg:"#E8E0EB", darkBg:"#2A2030", icon:"🛬", lbl:"回程班機",
     fields:[["airline","航空公司"],["flightNo","班號"],["date","日期"],["from","出發地"],["to","目的地"],["departure","出發時間"],["arrival","抵達時間"],["price","票價"]] },
-  transfer:{ title:"編輯機場接送", color:"#5C6B5E", bg:"#EEF2EE", icon:"🚌", lbl:"機場接送",
+  transfer:{ title:"編輯機場接送", color:"#5C6B5E", bg:"#DDE8DE", darkBg:"#1E2C20", icon:"🚌", lbl:"機場接送",
     fields:[["type","交通方式"],["detail","說明"],["price","費用"]] },
-  hotel:   { title:"編輯住宿",    color:"#6B5848", bg:"#F2EDE9", icon:"🏨", lbl:"住宿",
+  hotel:   { title:"編輯住宿",    color:"#7A6248", bg:"#EDE3D8", darkBg:"#2C2018", icon:"🏨", lbl:"住宿",
     fields:[["name","飯店名稱"],["location","地點"],["roomType","房型"],["nights","晚數"],["pricePerNight","每晚價格"],["mapUrl","Google Maps 網址"]] },
 };
 
@@ -249,6 +249,12 @@ function injectReturnToHotel(trip) {
 
 function reassignTimes(acts, origTimes) { return acts.map((a,i) => ({...a, time: origTimes[i] ?? a.time})); }
 function mapHref(v) { if(!v)return null; if(v.startsWith("http"))return v; return `https://www.google.com/maps/search/${encodeURIComponent(v)}`; }
+function autoMapUrl(act, hotel) {
+  if(act.mapUrl && act.mapUrl.startsWith("http")) return act.mapUrl;
+  // Use activity name as search keyword
+  const q = act.mapUrl || act.name;
+  return `https://www.google.com/maps/search/${encodeURIComponent(q)}`;
+}
 
 // ── CSS ──────────────────────────────────────────────────
 const makeCSS = (dark) => `
@@ -343,7 +349,7 @@ export default function PlanJ() {
     setPhase("loading");
     try {
       const dest = formData.destination === "其他（自填）" ? formData.destCustom : formData.destination;
-      const query = `大人${formData.adults}名，小孩${formData.children}名。去程${formData.departure}，回程${formData.returnDate}。目的地：${dest}。主題：${formData.theme}。預算：${formData.budget}。${formData.car}。飯店偏好：${formData.star}。${formData.note||""}`;
+      const query = `大人${formData.adults}名，小孩${formData.children}名。去程${formData.departure}，回程${formData.returnDate}。目的地：${dest}。主題：${formData.theme}。預算：${formData.budget}。${formData.car}。飯店偏好：${formData.star}。${formData.note??""}`;
       const res = await fetch("/api/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -638,16 +644,16 @@ export default function PlanJ() {
           <div style={{marginBottom:16,...sectionLabel}}>交通 & 住宿</div>
           <div className="result-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:36}}>
             {infoCards.map((c,i)=>(
-              <div key={i} className="info-card" style={{background:surface,border:`1px solid ${border}`,borderRadius:14,padding:"18px 20px",position:"relative",animation:`fadeUp .3s ${i*.06}s ease both`}}>
+              <div key={i} className="info-card" style={{background:D?c.darkBg:c.bg,border:`1px solid ${D?c.color+"40":c.color+"30"}`,borderRadius:14,padding:"18px 20px",position:"relative",animation:`fadeUp .3s ${i*.06}s ease both`}}>
                 <button className="edit-btn" onClick={()=>openInfoModal(c.key)}
-                  style={{position:"absolute",top:12,right:12,opacity:0,background:accentBg,border:`1px solid ${accent}40`,color:accent,borderRadius:6,padding:"3px 10px",fontSize:11,cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px",transition:"opacity .15s"}}>
-                  편집
+                  style={{position:"absolute",top:12,right:12,opacity:0,background:`${c.color}18`,border:`1px solid ${c.color}50`,color:c.color,borderRadius:6,padding:"3px 10px",fontSize:11,cursor:"pointer",fontFamily:"inherit",letterSpacing:"1px",transition:"opacity .15s"}}>
+                  編輯
                 </button>
-                <div style={{fontSize:12,letterSpacing:"2px",textTransform:"uppercase",color:muted,marginBottom:6}}>{c.lbl}</div>
+                <div style={{fontSize:12,letterSpacing:"2px",textTransform:"uppercase",color:c.color,marginBottom:6,opacity:.9}}>{c.lbl}</div>
                 <div style={{fontSize:18,fontFamily:"'Cormorant Garamond',serif",color:text,marginBottom:6,paddingRight:60,lineHeight:1.3}}>{c.title}</div>
                 <div style={{fontSize:13,color:muted,lineHeight:1.8}}>{c.lines.map((l,j)=><div key={j}>{l}</div>)}</div>
-                {c.note&&<div style={{fontSize:10,color:accent,marginTop:8,letterSpacing:"0.5px",opacity:.8}}>{c.note}</div>}
-                {c.mapUrl&&<a className="map-lnk" href={mapHref(c.mapUrl)} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,marginTop:10,fontSize:11,color:muted,border:`1px solid ${border}`,padding:"3px 10px",borderRadius:20,textDecoration:"none",letterSpacing:"0.5px"}}>📍 地圖</a>}
+                {c.note&&<div style={{fontSize:10,color:c.color,marginTop:8,letterSpacing:"0.5px",opacity:.75}}>{c.note}</div>}
+                {c.mapUrl&&<a className="map-lnk" href={mapHref(c.mapUrl)} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,marginTop:10,fontSize:11,color:c.color,border:`1px solid ${c.color}40`,padding:"3px 10px",borderRadius:20,textDecoration:"none",letterSpacing:"0.5px"}}>📍 地圖</a>}
               </div>
             ))}
           </div>
@@ -688,10 +694,10 @@ export default function PlanJ() {
                             <div style={{flex:1,minWidth:0}}>
                               <div style={{fontSize:15,color:text,fontWeight:500,marginBottom:2}}>{act.name}</div>
                               <div style={{fontSize:13,color:muted,lineHeight:1.6,marginBottom:act.mapUrl?6:0}}>{act.desc}</div>
-                              {act.mapUrl
-                                ?<a className="map-lnk" href={mapHref(act.mapUrl)} target="_blank" rel="noreferrer" style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:11,color:muted,border:`1px solid ${border}`,padding:"2px 8px",borderRadius:20,textDecoration:"none"}}>📍 地圖</a>
-                                :<span style={{fontSize:10,color:border,fontStyle:"italic"}}>點 ✏️ 貼入地圖連結</span>
-                              }
+                              <a className="map-lnk" href={autoMapUrl(act)} target="_blank" rel="noreferrer"
+                                style={{display:"inline-flex",alignItems:"center",gap:3,fontSize:11,color:muted,border:`1px solid ${border}`,padding:"2px 8px",borderRadius:20,textDecoration:"none"}}>
+                                📍 地圖
+                              </a>
                             </div>
                             <div className="act-ctrls" style={{display:"flex",gap:3,opacity:0,flexShrink:0}}>
                               <button title="複製" onClick={()=>copyAct(di,ai)} style={{background:accentBg,border:"none",width:28,height:28,borderRadius:7,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>📋</button>

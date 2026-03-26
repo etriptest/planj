@@ -10,7 +10,7 @@ export async function onRequestPost(context) {
 
   try {
     const { query } = await request.json();
-    if (!query) return new Response(JSON.stringify({ error: "query is required" }), { status:400, headers:corsHeaders });
+    if (!query) return new Response(JSON.stringify({ error: "query is required" }), { status: 400, headers: corsHeaders });
 
     const SYS = `你是專業旅遊規劃師。根據使用者需求生成完整旅遊行程。
 只回傳純 JSON，不加任何說明文字或 markdown。結構：
@@ -26,9 +26,9 @@ export async function onRequestPost(context) {
 - 每天5-6個活動，最後一個活動不要是回飯店（程式會自動加）
 - 符合使用者偏好（主題、預算、租車、飯店星級）
 - 餐廳要有在地特色
-- mapUrl 留空字串，由使用者自行貼入 Google Maps 連結
+- mapUrl 用活動名稱加地點產生關鍵字，格式為 活動名稱+城市，例如：狸小路商店街+札幌
 - 價格用 TWD 或 JPY
-- 班機資訊標注為 AI 建議，請使用者自行確認`;
+- 班機為 AI 建議，請使用者至航空公司官網確認`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -46,14 +46,14 @@ export async function onRequestPost(context) {
     });
 
     const data = await response.json();
-    if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status:500, headers:corsHeaders });
+    if (data.error) return new Response(JSON.stringify({ error: data.error.message }), { status: 500, headers: corsHeaders });
 
     const text = data.content.map(x => x.text || "").join("").replace(/```json|```/g, "").trim();
     const trip = JSON.parse(text);
-    return new Response(JSON.stringify({ trip }), { status:200, headers:corsHeaders });
+    return new Response(JSON.stringify({ trip }), { status: 200, headers: corsHeaders });
 
-  } catch(e) {
-    return new Response(JSON.stringify({ error: e.message }), { status:500, headers:corsHeaders });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
   }
 }
 
